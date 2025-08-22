@@ -39,34 +39,49 @@ def parse_reactions(text):
             name = line.split("Voir le profil de", 1)[1].strip()
             if name:
                 names.append(name)
+    return names
+
+def format_comma_separated(names):
+    """Retourne le format Airtable : PROFIL, PROFIL, PROFIL, """
     return ", ".join(names) + (", " if names else "")
 
 # ---- Traitement ----
 if st.button("🚀 Générer le tableau"):
-    reactions_parsed = parse_reactions(reactions_raw)
+    reactions_list = parse_reactions(reactions_raw)
+    reactions_parsed = format_comma_separated(reactions_list)
 
-    # pour commentaires & reposts : simple nettoyage (remplacer retours ligne par ", ")
-    comments_parsed = comments_raw.replace("\n", ", ").strip()
-    if comments_parsed:
-        comments_parsed += ", "
-    reposts_parsed = reposts_raw.replace("\n", ", ").strip()
-    if reposts_parsed:
-        reposts_parsed += ", "
+    # Pour commentaires & reposts : simple split lignes
+    comments_list = [c.strip() for c in comments_raw.splitlines() if c.strip()]
+    comments_parsed = format_comma_separated(comments_list)
 
+    reposts_list = [r.strip() for r in reposts_raw.splitlines() if r.strip()]
+    reposts_parsed = format_comma_separated(reposts_list)
+
+    # ---- Vue tableau global ----
     df = pd.DataFrame([{
         "Post (url)": post_url,
-        "Réactions": reactions_parsed,
-        "Commentaires": comments_parsed,
-        "Reposts": reposts_parsed
+        "Réactions (Airtable)": reactions_parsed,
+        "Commentaires (Airtable)": comments_parsed,
+        "Reposts (Airtable)": reposts_parsed
     }])
 
-    st.subheader("✅ Résultat")
+    st.subheader("✅ Résultat (format Airtable)")
     st.dataframe(df)
 
-    # ---- Export en Excel ----
+    # ---- Vue listes (1 profil = 1 ligne) ----
+    st.subheader("📋 Résultat sous forme de liste")
+    tab_list = pd.DataFrame({
+        "Réactions": reactions_list,
+        "Commentaires": comments_list,
+        "Reposts": reposts_list
+    })
+    st.dataframe(tab_list)
+
+    # ---- Export Excel ----
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Interactions")
+        df.to_excel(writer, index=False, sheet_name="Résumé")
+        tab_list.to_excel(writer, index=False, sheet_name="Détail")
 
     st.download_button(
         label="📥 Télécharger en XLSX",
@@ -74,4 +89,3 @@ if st.button("🚀 Générer le tableau"):
         file_name="linkedin_interactions.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
