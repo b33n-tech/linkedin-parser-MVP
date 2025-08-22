@@ -47,17 +47,17 @@ def format_comma_separated(names):
 
 # ---- Traitement ----
 if st.button("🚀 Générer le tableau"):
+    # Parsing
     reactions_list = parse_reactions(reactions_raw)
     reactions_parsed = format_comma_separated(reactions_list)
 
-    # Pour commentaires & reposts : simple split lignes
     comments_list = [c.strip() for c in comments_raw.splitlines() if c.strip()]
     comments_parsed = format_comma_separated(comments_list)
 
     reposts_list = [r.strip() for r in reposts_raw.splitlines() if r.strip()]
     reposts_parsed = format_comma_separated(reposts_list)
 
-    # ---- Vue tableau global ----
+    # ---- Résumé global ----
     df = pd.DataFrame([{
         "Post (url)": post_url,
         "Réactions (Airtable)": reactions_parsed,
@@ -68,13 +68,29 @@ if st.button("🚀 Générer le tableau"):
     st.subheader("✅ Résultat (format Airtable)")
     st.dataframe(df)
 
+    # ---- Compteurs ----
+    st.markdown(f"""
+    **📊 Statistiques :**  
+    - {len(reactions_list)} réactions  
+    - {len(comments_list)} commentaires  
+    - {len(reposts_list)} reposts
+    """)
+
     # ---- Vue listes (1 profil = 1 ligne) ----
     st.subheader("📋 Résultat sous forme de liste")
+
+    max_len = max(len(reactions_list), len(comments_list), len(reposts_list))
+
+    reactions_col = reactions_list + [""] * (max_len - len(reactions_list))
+    comments_col = comments_list + [""] * (max_len - len(comments_list))
+    reposts_col = reposts_list + [""] * (max_len - len(reposts_list))
+
     tab_list = pd.DataFrame({
-        "Réactions": reactions_list,
-        "Commentaires": comments_list,
-        "Reposts": reposts_list
+        "Réactions": reactions_col,
+        "Commentaires": comments_col,
+        "Reposts": reposts_col
     })
+
     st.dataframe(tab_list)
 
     # ---- Export Excel ----
